@@ -48,7 +48,7 @@ export default function Dashboard() {
     setLoadingTasks(true);
     try {
       const res = await getTasks(token);
-      setTasks(res.data);
+      setTasks(res.data.content || []);
     } catch (err) {
       console.error("Error al cargar tareas", err);
     } finally {
@@ -56,8 +56,8 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 
