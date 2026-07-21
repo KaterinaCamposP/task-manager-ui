@@ -9,7 +9,13 @@ import {
   deleteTask,
   toggleTaskStatus,
 } from "../api/tasks";
-import { RotateCcw, Pencil, Trash2 } from "lucide-react";
+import {
+  RotateCcw,
+  Pencil,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 export default function Dashboard() {
   const { token, logout } = useAuth();
@@ -17,6 +23,12 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sortBy, setSortBy] = useState("createdAt,desc");
+  const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
 
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null); // null = crear, objeto = editar
@@ -42,13 +54,38 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (token) fetchTasks();
-  }, [token]);
+  }, [token, page, statusFilter, sortBy]);
+
+  const fetchStats = async () => {
+    try {
+      const [all, pending, completed] = await Promise.all([
+        getTasks(token, { page: 0, size: 1 }),
+        getTasks(token, { page: 0, size: 1, status: "PENDING" }),
+        getTasks(token, { page: 0, size: 1, status: "COMPLETED" }),
+      ]);
+      setStats({
+        total: all.data.totalElements || 0,
+        pending: pending.data.totalElements || 0,
+        completed: completed.data.totalElements || 0,
+      });
+    } catch (err) {
+      console.error("Error al cargar el resumen", err);
+    }
+  };
 
   const fetchTasks = async () => {
     setLoadingTasks(true);
     try {
-      const res = await getTasks(token);
+      const res = await getTasks(token, {
+        page,
+        size: 10,
+        sort: sortBy,
+        ...(statusFilter ? { status: statusFilter } : {}),
+      });
       setTasks(res.data.content || []);
+      setTotalPages(res.data.totalPages || 0);
+      setTotalElements(res.data.totalElements || 0);
+      fetchStats(); // sin await: recalcula el resumen global en paralelo, sin bloquear la lista
     } catch (err) {
       console.error("Error al cargar tareas", err);
     } finally {
@@ -59,6 +96,16 @@ export default function Dashboard() {
   const handleLogout = async () => {
     await logout();
     navigate("/login");
+  };
+
+  const handleFilterChange = (newFilter) => {
+    setStatusFilter(newFilter);
+    setPage(0);
+  };
+
+  const handleSortChange = (newSort) => {
+    setSortBy(newSort);
+    setPage(0);
   };
 
   const openCreateModal = () => {
@@ -134,7 +181,11 @@ export default function Dashboard() {
     setBusyTaskId(taskId);
     try {
       await deleteTask(token, taskId);
-      await fetchTasks();
+      if (tasks.length === 1 && page > 0) {
+        setPage(page - 1); // era la única tarea de la página: vuelve a la anterior (el useEffect recarga)
+      } else {
+        await fetchTasks();
+      }
     } catch (err) {
       console.error("Error al eliminar tarea", err);
     } finally {
@@ -156,17 +207,72 @@ export default function Dashboard() {
       </header>
 
       <main style={styles.main}>
+        <div style={styles.statsRow}>
+          <div style={styles.statCard}>
+            <span style={{ ...styles.statNumber, color: "#4f46e5" }}>
+              {stats.total}
+            </span>
+            <span style={styles.statLabel}>Totales</span>
+          </div>
+          <div style={styles.statCard}>
+            <span style={{ ...styles.statNumber, color: "#f59e0b" }}>
+              {stats.pending}
+            </span>
+            <span style={styles.statLabel}>Pendientes</span>
+          </div>
+          <div style={styles.statCard}>
+            <span style={{ ...styles.statNumber, color: "#22c55e" }}>
+              {stats.completed}
+            </span>
+            <span style={styles.statLabel}>Completadas</span>
+          </div>
+        </div>
         <div style={styles.toolbar}>
           <h2 style={styles.sectionTitle}>Mis tareas</h2>
           <button onClick={openCreateModal} style={styles.createBtn}>
             + Crear tarea
           </button>
         </div>
+        <div style={styles.filterBar}>
+          <div style={styles.filterGroup}>
+            {[
+              { label: "Todas", value: "" },
+              { label: "Pendientes", value: "PENDING" },
+              { label: "Completadas", value: "COMPLETED" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => handleFilterChange(opt.value)}
+                style={{
+                  ...styles.filterBtn,
+                  ...(statusFilter === opt.value ? styles.filterBtnActive : {}),
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <select
+            value={sortBy}
+            onChange={(e) => handleSortChange(e.target.value)}
+            style={styles.sortSelect}
+          >
+            <option value="createdAt,desc">Más recientes</option>
+            <option value="createdAt,asc">Más antiguas</option>
+            <option value="title,asc">Título A-Z</option>
+            <option value="title,desc">Título Z-A</option>
+          </select>
+        </div>
 
         {loadingTasks ? (
           <p style={styles.empty}>Cargando tareas...</p>
         ) : tasks.length === 0 ? (
-          <p style={styles.empty}>No tienes tareas aún. ¡Crea una!</p>
+          <p style={styles.empty}>
+            {statusFilter
+              ? "No hay tareas con este filtro."
+              : "No tienes tareas aún. ¡Crea una!"}
+          </p>
         ) : (
           <ul style={styles.taskList}>
             {tasks.map((task) => {
@@ -248,6 +354,48 @@ export default function Dashboard() {
             })}
           </ul>
         )}
+
+        {totalPages > 1 && (
+          <div style={styles.pagination}>
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0 || loadingTasks}
+              style={{
+                ...styles.pageBtn,
+                ...(page === 0 ? styles.pageBtnDisabled : {}),
+              }}
+              title="Página anterior"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => setPage(i)}
+                disabled={loadingTasks}
+                style={{
+                  ...styles.pageBtn,
+                  ...(i === page ? styles.pageBtnActive : {}),
+                }}
+              >
+                {i + 1}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1 || loadingTasks}
+              style={{
+                ...styles.pageBtn,
+                ...(page >= totalPages - 1 ? styles.pageBtnDisabled : {}),
+              }}
+              title="Página siguiente"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
       </main>
 
       {showModal && (
@@ -321,9 +469,16 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
+    gap: "0.5rem",
   },
   headerTitle: { color: "white", margin: 0 },
-  headerRight: { display: "flex", alignItems: "center", gap: "1rem" },
+  headerRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: "1rem",
+    flexWrap: "wrap",
+  },
   username: { color: "white", fontSize: "0.9rem" },
   logoutBtn: {
     backgroundColor: "transparent",
@@ -427,7 +582,9 @@ const styles = {
     backgroundColor: "white",
     padding: "2rem",
     borderRadius: "8px",
-    width: "400px",
+    width: "90%",
+    maxWidth: "400px",
+    boxSizing: "border-box",
     boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
   },
   modalTitle: { margin: "0 0 1rem", color: "#333" },
@@ -458,4 +615,96 @@ const styles = {
     color: "#333",
   },
   error: { color: "red", fontSize: "0.9rem", marginBottom: "1rem" },
+  pagination: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "0.4rem",
+    marginTop: "1.5rem",
+  },
+  pageBtn: {
+    minWidth: "36px",
+    height: "36px",
+    padding: "0 0.5rem",
+    border: "1px solid #ccc",
+    borderRadius: "4px",
+    backgroundColor: "white",
+    color: "#333",
+    cursor: "pointer",
+    fontSize: "0.9rem",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pageBtnActive: {
+    backgroundColor: "#4f46e5",
+    color: "white",
+    borderColor: "#4f46e5",
+  },
+  pageBtnDisabled: {
+    opacity: 0.4,
+    cursor: "not-allowed",
+  },
+  filterBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "1rem",
+    marginBottom: "1rem",
+    flexWrap: "wrap",
+  },
+  filterGroup: {
+    display: "flex",
+    gap: "0.4rem",
+  },
+  filterBtn: {
+    padding: "0.4rem 0.9rem",
+    border: "1px solid #ccc",
+    borderRadius: "999px",
+    backgroundColor: "white",
+    color: "#555",
+    cursor: "pointer",
+    fontSize: "0.85rem",
+  },
+  filterBtnActive: {
+    backgroundColor: "#4f46e5",
+    color: "white",
+    borderColor: "#4f46e5",
+  },
+  sortSelect: {
+    padding: "0.4rem 0.6rem",
+    border: "1px solid #ccc",
+    borderRadius: "4px",
+    backgroundColor: "white",
+    color: "#333",
+    fontSize: "0.85rem",
+    cursor: "pointer",
+  },
+  statsRow: {
+    display: "flex",
+    gap: "1rem",
+    marginBottom: "1.5rem",
+    flexWrap: "wrap",
+  },
+  statCard: {
+    flex: 1,
+    minWidth: "120px",
+    backgroundColor: "white",
+    padding: "1rem",
+    borderRadius: "6px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "0.25rem",
+  },
+  statNumber: {
+    fontSize: "1.8rem",
+    fontWeight: 700,
+    lineHeight: 1,
+  },
+  statLabel: {
+    fontSize: "0.85rem",
+    color: "#666",
+  },
 };

@@ -13,8 +13,11 @@ const authHeader = (token) => ({
   headers: { Authorization: `Bearer ${token}` }
 })
 
-export const getTasks = (token) =>
-  api.get('/tasks', authHeader(token))
+export const getTasks = (token, params = {}) =>
+  api.get("/tasks", {
+    ...authHeader(token),
+    params,
+  });
 
 export const createTask = (token, data) =>
   api.post('/tasks', data, authHeader(token))
