@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { getProfile } from "../api/auth";
 import {
   getTasks,
@@ -20,6 +21,7 @@ import "./dashboard.css";
 
 export default function Dashboard() {
   const { token, logout } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -89,6 +91,7 @@ export default function Dashboard() {
       fetchStats(); // sin await: recalcula el resumen global en paralelo, sin bloquear la lista
     } catch (err) {
       console.error("Error al cargar tareas", err);
+      showToast("Error al cargar las tareas", "error");
     } finally {
       setLoadingTasks(false);
     }
@@ -143,16 +146,19 @@ export default function Dashboard() {
           description: formData.description,
           status: editingTask.status,
         });
+        showToast("Tarea actualizada", "success");
       } else {
         await createTask(token, {
           title: formData.title,
           description: formData.description,
         });
+        showToast("Tarea creada", "success");
       }
       await fetchTasks();
       closeModal();
     } catch (err) {
       setFormError("No se pudo guardar la tarea. Intenta de nuevo.");
+      showToast("No se pudo guardar la tarea", "error");
     } finally {
       setSaving(false);
     }
@@ -163,8 +169,10 @@ export default function Dashboard() {
     try {
       await toggleTaskStatus(token, taskId);
       await fetchTasks();
+      showToast("Estado actualizado", "success");
     } catch (err) {
       console.error("Error al cambiar estado", err);
+      showToast("Error al cambiar el estado", "error");
     } finally {
       setBusyTaskId(null);
     }
@@ -187,8 +195,10 @@ export default function Dashboard() {
       } else {
         await fetchTasks();
       }
+      showToast("Tarea eliminada", "success");
     } catch (err) {
       console.error("Error al eliminar tarea", err);
+      showToast("Error al eliminar la tarea", "error");
     } finally {
       setBusyTaskId(null);
       setDeletingId(null);
@@ -264,7 +274,17 @@ export default function Dashboard() {
         </div>
 
         {loadingTasks ? (
-          <p className="tasks-empty">Cargando tareas...</p>
+          <ul className="skeleton-list">
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="skeleton-item">
+                <div className="skeleton-info">
+                  <div className="skeleton-line skeleton-title" />
+                  <div className="skeleton-line skeleton-desc" />
+                </div>
+                <div className="skeleton-line skeleton-badge" />
+              </li>
+            ))}
+          </ul>
         ) : tasks.length === 0 ? (
           <p className="tasks-empty">
             {statusFilter
