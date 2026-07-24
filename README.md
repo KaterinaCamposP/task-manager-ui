@@ -2,7 +2,7 @@
 
 Frontend React para la API de gestión de tareas personales.
 
-**Stack:** React 18 · Vite · React Router DOM · Axios · lucide-react
+**Stack:** React 18 · Vite · React Router DOM · Axios · lucide-react · Vitest · React Testing Library
 
 **Repositorio backend:** https://github.com/KaterinaCamposP/task-manager-api
 
@@ -11,7 +11,7 @@ Frontend React para la API de gestión de tareas personales.
 ## Requisitos
 
 - Node.js 18+
-- Backend task-manager-api corriendo en localhost:8080
+- Backend task-manager-api corriendo en localhost:8080 (no es necesario para correr los tests)
 
 ## Instalación
 
@@ -42,9 +42,9 @@ objetos JS inline (`style={...}`) en vez de archivos `.css` separados. Esto
 generó un bug real en Sprint 2: botones sin `color` explícito heredaban
 estilos globales inesperados de Vite y quedaban invisibles (texto blanco
 sobre fondo blanco). Se corrigió agregando `color` explícito a cada estilo.
-Migrar a CSS separado (o CSS Modules) queda pendiente para Sprint 4,
-dentro de la tarea "Pulir UI/UX", ya que resolvería este tipo de bugs de
-raíz y permitiría hover states, media queries y reutilización de estilos.
+La migración a CSS separado se realizó en Sprint 4 (ver "Migración de estilos
+inline a CSS (Sprint 4)"), resolviendo este tipo de bugs de raíz y habilitando
+hover states, media queries y reutilización de estilos.
 
 ### Soft delete — sin tachado visual de "eliminada" (Sprint 2)
 
@@ -58,12 +58,12 @@ el alcance actual). El tachado gris sí se implementó, pero para tareas
 con estado COMPLETED, que es el otro caso de feedback visual de
 estado que pide el backlog.
 
-### Feedback visual — pendiente para Sprint 4 (Sprint 2)
+### Feedback visual — resuelto en Sprint 4 (Sprint 2)
 
-Loading spinners y toasts de éxito/error no se implementaron en Sprint 2.
-Actualmente el feedback es texto plano ("Cargando tareas...", "..." en
-botones ocupados). El Sprint 4 ya incluye la tarea "Feedback visual:
-Snackbars/Toasts, skeleton loading" donde se abordará correctamente.
+Loading spinners y toasts de éxito/error no se implementaron en Sprint 2
+(el feedback era texto plano: "Cargando tareas...", "..." en botones
+ocupados). Se abordaron en Sprint 4 con toasts y skeleton loading (ver
+"Toasts y skeleton loading con ToastContext (Sprint 4)").
 
 ### Logout con invalidación en backend — Opción 1 (Sprint 3)
 
@@ -107,24 +107,58 @@ lucide-react). No se implementó el `...` (ellipsis) para colapsar páginas
 intermedias cuando hay muchas: con el volumen de datos de este proyecto no
 se justifica la complejidad extra. Queda como mejora opcional. Además, al
 eliminar la única tarea de una página que no es la primera, el Dashboard
-retrocede una página solo (`setPage(page - 1)`) para no quedar mostrando
+retrocede una página sola (`setPage(page - 1)`) para no quedar mostrando
 una página vacía.
 
 ### Responsive vía Flexbox, pixel-perfect en Sprint 4 (Sprint 3)
 
 El backlog pide adaptar el diseño a móvil/tablet/escritorio "con
-Grid/Flexbox". Como los estilos son inline (ver decisión de Sprint 1 y 2)
+Grid/Flexbox". Como los estilos eran inline (ver decisión de Sprint 1 y 2)
 y los estilos inline no soportan media queries, el responsive de Sprint 3
 se resolvió vía Flexbox: `flex-wrap` en el encabezado y en las barras de
 filtros/resumen, `min-width` en las tarjetas para que se apilen solas en
 pantallas chicas, y `width: 90%` + `max-width` + `box-sizing: border-box`
-en el modal para que nunca se salga de la pantalla. Estas propiedades
-sobreviven a la futura migración a CSS (en CSS también se usarían
-`flex-wrap` y `max-width`), así que no es trabajo descartable. El reflow
-pixel-perfect con media queries (filas de tareas que pasan a columna,
-grid centrado en 1 columna, paddings y fuentes adaptados) queda para
-Sprint 4, junto con la migración a CSS — es el mismo límite honesto que
-ya se documentó para los estilos inline.
+en el modal para que nunca se salga de la pantalla. El reflow pixel-perfect
+con media queries (filas de tareas que pasan a columna, header que se
+reacomoda, modal al 90% del ancho) se implementó en Sprint 4 en
+`dashboard.css`, junto con la migración a CSS.
+
+### Migración de estilos inline a CSS (Sprint 4)
+
+Se migraron los estilos inline a archivos CSS separados, resolviendo de raíz
+el bug de Sprint 2 (botones que heredaban estilos globales de Vite) y
+habilitando hover states, media queries y reutilización. Login y Register
+comparten `auth.css`; Dashboard usa `dashboard.css`. Se limpió el CSS por
+defecto de Vite en `index.css` (reset con `box-sizing` y color de texto
+oscuro en `:root`, que era la causa raíz del texto blanco sobre blanco) y
+se vació `App.css`. Los colores condicionales (tarjetas de resumen y badges)
+pasaron a clases dedicadas (`stat-total/pending/completed`,
+`badge-pending/completed`) en vez de `style={{...}}` inline.
+
+### Toasts y skeleton loading con ToastContext (Sprint 4)
+
+Se implementó el feedback visual que estaba pendiente desde Sprint 2. Un
+`ToastContext` (con `useToast`) expone `showToast(message, type)`; el
+`ToastProvider` envuelve la app en `App.jsx` y renderiza los toasts fuera de
+las rutas, para que persistan entre navegaciones. Los toasts tienen
+auto-dismiss (~3s) con animación de entrada/salida vía keyframes CSS y son
+responsive (de lado a lado bajo 600px). El listado de tareas muestra un
+skeleton loading (3 filas con pulso) mientras carga, en vez del texto plano
+"Cargando tareas...". Los botones de acción, crear y cancelar tienen estado
+`disabled` visible.
+
+### Tests de integración del frontend con Vitest + React Testing Library (Sprint 4)
+
+Se agregaron tests de integración que cubren el flujo completo registro →
+login → CRUD (la tarjeta del backlog "Tests integración frontend"). Se usó
+Vitest + React Testing Library + jsdom, mockeando los módulos `api/auth` y
+`api/tasks` con `vi.mock`, así los tests ejercitan componente + contexto +
+router sin depender del backend levantado. Dos detalles de configuración con
+`globals: false`: (1) el setup importa `@testing-library/jest-dom/vitest`
+(en vez del import genérico, que revienta con "expect is not defined" porque
+no hay `expect` global), y (2) se registra un `afterEach` con `cleanup()` en
+`src/test/setup.js`, porque sin `globals` RTL no auto-desmonta el DOM entre
+tests y las queries encontraban elementos duplicados del test anterior.
 
 ---
 
@@ -137,12 +171,21 @@ src/
  │   └── tasks.js
  ├── assets/
  ├── components/          # Componentes reutilizables
- ├── context/             # AuthContext (token, logout)
- │   └── AuthContext.jsx
+ ├── context/             # Contextos globales
+ │   ├── AuthContext.jsx
+ │   ├── ToastContext.jsx
+ │   └── toast.css
  ├── pages/
  │   ├── Dashboard.jsx
+ │   ├── Dashboard.test.jsx
+ │   ├── dashboard.css
  │   ├── Login.jsx
- │   └── Register.jsx
+ │   ├── Login.test.jsx
+ │   ├── Register.jsx
+ │   ├── Register.test.jsx
+ │   └── auth.css
+ ├── test/
+ │   └── setup.js
  ├── App.css
  ├── App.jsx
  ├── index.css
@@ -172,11 +215,11 @@ src/
 - Tachado visual para tareas completadas
 - Botones de acción con íconos SVG (lucide-react)
 
-### Sprint 2 — Pendiente (movido a Sprint 4)
+### Sprint 2 — Movido a Sprint 4 (completado)
 
-- [ ] Loading spinners
-- [ ] Toasts de éxito/error
-- [ ] Migración de estilos inline a CSS
+- [x] Loading spinners (skeleton loading)
+- [x] Toasts de éxito/error
+- [x] Migración de estilos inline a CSS
 
 ---
 
@@ -194,6 +237,58 @@ src/
 - Mensaje distinto para "sin tareas" vs "sin resultados con este filtro"
 - Layout responsive vía Flexbox (modal, encabezado y barras se reacomodan
   en pantallas chicas)
+
+---
+
+## Funcionalidades Sprint 4
+
+- Migración de estilos inline a CSS (auth.css compartido por Login/Register,
+  dashboard.css para Dashboard; reset global en index.css)
+- Toasts de éxito/error (ToastContext, auto-dismiss con animación, responsive)
+- Skeleton loading en el listado de tareas
+- Botones con estado disabled visible
+- Responsive pixel-perfect con media queries en dashboard.css (bajo 600px:
+  header, filas de tareas y modal se reacomodan)
+- Tests de integración del frontend (10 tests: login, registro y CRUD con
+  axios mockeado)
+
+---
+
+## Testing
+
+### Ejecutar tests
+
+npm test
+
+### Tests incluidos — Sprint 4
+
+Los tests de integración usan Vitest + React Testing Library con jsdom y
+mockean los módulos de API (`vi.mock`), así que corren sin el backend levantado.
+
+**Login (3):**
+
+- Renderiza el formulario
+- Login exitoso guarda token y navega a dashboard
+- Login fallido muestra error y no navega
+
+**Register (2):**
+
+- Registro exitoso guarda token y navega
+- Contraseña corta muestra error y no llama a la API
+
+**Dashboard (5):**
+
+- Lista las tareas desde la API
+- Crea una tarea y muestra toast de éxito
+- Elimina una tarea tras confirmar
+- Cambia el estado de una tarea
+- Edita una tarea
+
+### Notas técnicas
+
+- Con `globals: false`, el setup importa `@testing-library/jest-dom/vitest`
+  (el import genérico falla con "expect is not defined") y registra `cleanup()`
+  en un `afterEach` (RTL no auto-desmonta el DOM sin globals)
 
 ---
 
