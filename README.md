@@ -30,7 +30,7 @@ La app levanta en http://localhost:5173
 ### lucide-react para íconos (Sprint 2)
 
 El backlog no especifica cómo representar los botones de acción (cambiar
-estado, editar, eliminar). Se probó primero con caracteres Unicode (↺, ✎, )
+estado, editar, eliminar). Se probó primero con caracteres Unicode (↺, ✎, 🗑)
 pero no renderizaban de forma consistente según el sistema operativo/fuentes
 instaladas. Se optó por `lucide-react`, que usa SVG puro y se ve idéntico
 en cualquier entorno.
