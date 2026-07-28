@@ -1,17 +1,17 @@
-import axios from 'axios'
+import axios from "axios";
 
-const API_URL = 'http://localhost:8080/api'
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json'
-  }
-})
+    "Content-Type": "application/json",
+  },
+});
 
 const authHeader = (token) => ({
-  headers: { Authorization: `Bearer ${token}` }
-})
+  headers: { Authorization: `Bearer ${token}` },
+});
 
 export const getTasks = (token, params = {}) =>
   api.get("/tasks", {
@@ -20,13 +20,13 @@ export const getTasks = (token, params = {}) =>
   });
 
 export const createTask = (token, data) =>
-  api.post('/tasks', data, authHeader(token))
+  api.post("/tasks", data, authHeader(token));
 
 export const updateTask = (token, id, data) =>
-  api.put(`/tasks/${id}`, data, authHeader(token))
+  api.put(`/tasks/${id}`, data, authHeader(token));
 
 export const deleteTask = (token, id) =>
-  api.delete(`/tasks/${id}`, authHeader(token))
+  api.delete(`/tasks/${id}`, authHeader(token));
 
 export const toggleTaskStatus = (token, id) =>
-  api.patch(`/tasks/${id}/status`, {}, authHeader(token))
+  api.patch(`/tasks/${id}/status`, {}, authHeader(token));

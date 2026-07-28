@@ -294,8 +294,12 @@ mockean los módulos de API (`vi.mock`), así que corren sin el backend levantad
 
 ## Conexión con el backend
 
-La URL base está en `src/api/auth.js` y `src/api/tasks.js`:
+La URL base se lee de la variable de entorno `VITE_API_URL` con fallback a
+`http://localhost:8080/api` (ver `src/api/auth.js` y `src/api/tasks.js`):
 
-const API_URL = 'http://localhost:8080/api'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
-Para producción cambiar por la URL de Render/Railway.
+En desarrollo no hay que configurar nada (usa el fallback local). En Vercel se
+setea `VITE_API_URL` a la URL de producción del backend
+(`https://task-manager-api-5737.onrender.com/api`) en Settings → Environment
+Variables, antes del deploy.
