@@ -9,6 +9,7 @@ import {
   updateTask,
   deleteTask,
   toggleTaskStatus,
+  getTaskStats,
 } from "../api/tasks";
 import {
   RotateCcw,
@@ -76,24 +77,36 @@ export default function Dashboard() {
     }
   };
 
-  const fetchTasks = async () => {
-    setLoadingTasks(true);
+  // const fetchTasks = async () => {
+  //   setLoadingTasks(true);
+  //   try {
+  //     const res = await getTasks(token, {
+  //       page,
+  //       size: 10,
+  //       sort: sortBy,
+  //       ...(statusFilter ? { status: statusFilter } : {}),
+  //     });
+  //     setTasks(res.data.content || []);
+  //     setTotalPages(res.data.totalPages || 0);
+  //     setTotalElements(res.data.totalElements || 0);
+  //     fetchStats(); // sin await: recalcula el resumen global en paralelo, sin bloquear la lista
+  //   } catch (err) {
+  //     console.error("Error al cargar tareas", err);
+  //     showToast("Error al cargar las tareas", "error");
+  //   } finally {
+  //     setLoadingTasks(false);
+  //   }
+  // };
+  const fetchStats = async () => {
     try {
-      const res = await getTasks(token, {
-        page,
-        size: 10,
-        sort: sortBy,
-        ...(statusFilter ? { status: statusFilter } : {}),
+      const res = await getTaskStats(token);
+      setStats({
+        total: res.data.total,
+        pending: res.data.pending,
+        completed: res.data.completed,
       });
-      setTasks(res.data.content || []);
-      setTotalPages(res.data.totalPages || 0);
-      setTotalElements(res.data.totalElements || 0);
-      fetchStats(); // sin await: recalcula el resumen global en paralelo, sin bloquear la lista
     } catch (err) {
-      console.error("Error al cargar tareas", err);
-      showToast("Error al cargar las tareas", "error");
-    } finally {
-      setLoadingTasks(false);
+      console.error("Error al cargar estadísticas", err);
     }
   };
 

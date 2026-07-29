@@ -30,3 +30,6 @@ export const deleteTask = (token, id) =>
 
 export const toggleTaskStatus = (token, id) =>
   api.patch(`/tasks/${id}/status`, {}, authHeader(token));
+
+export const getTaskStats = (token) =>
+  api.get("/tasks/stats", authHeader(token));
