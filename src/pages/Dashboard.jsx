@@ -35,13 +35,13 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
 
   const [showModal, setShowModal] = useState(false);
-  const [editingTask, setEditingTask] = useState(null); // null = crear, objeto = editar
+  const [editingTask, setEditingTask] = useState(null);
   const [formData, setFormData] = useState({ title: "", description: "" });
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [deletingId, setDeletingId] = useState(null); // id pendiente de confirmar borrado
-  const [busyTaskId, setBusyTaskId] = useState(null); // id con acción en curso (toggle/delete)
+  const [deletingId, setDeletingId] = useState(null);
+  const [busyTaskId, setBusyTaskId] = useState(null);
 
   useEffect(() => {
     if (!token) {
@@ -62,43 +62,6 @@ export default function Dashboard() {
 
   const fetchStats = async () => {
     try {
-      const [all, pending, completed] = await Promise.all([
-        getTasks(token, { page: 0, size: 1 }),
-        getTasks(token, { page: 0, size: 1, status: "PENDING" }),
-        getTasks(token, { page: 0, size: 1, status: "COMPLETED" }),
-      ]);
-      setStats({
-        total: all.data.totalElements || 0,
-        pending: pending.data.totalElements || 0,
-        completed: completed.data.totalElements || 0,
-      });
-    } catch (err) {
-      console.error("Error al cargar el resumen", err);
-    }
-  };
-
-  // const fetchTasks = async () => {
-  //   setLoadingTasks(true);
-  //   try {
-  //     const res = await getTasks(token, {
-  //       page,
-  //       size: 10,
-  //       sort: sortBy,
-  //       ...(statusFilter ? { status: statusFilter } : {}),
-  //     });
-  //     setTasks(res.data.content || []);
-  //     setTotalPages(res.data.totalPages || 0);
-  //     setTotalElements(res.data.totalElements || 0);
-  //     fetchStats(); // sin await: recalcula el resumen global en paralelo, sin bloquear la lista
-  //   } catch (err) {
-  //     console.error("Error al cargar tareas", err);
-  //     showToast("Error al cargar las tareas", "error");
-  //   } finally {
-  //     setLoadingTasks(false);
-  //   }
-  // };
-  const fetchStats = async () => {
-    try {
       const res = await getTaskStats(token);
       setStats({
         total: res.data.total,
@@ -107,6 +70,27 @@ export default function Dashboard() {
       });
     } catch (err) {
       console.error("Error al cargar estadísticas", err);
+    }
+  };
+
+  const fetchTasks = async () => {
+    setLoadingTasks(true);
+    try {
+      const res = await getTasks(token, {
+        page,
+        size: 10,
+        sort: sortBy,
+        ...(statusFilter ? { status: statusFilter } : {}),
+      });
+      setTasks(res.data.content || []);
+      setTotalPages(res.data.totalPages || 0);
+      setTotalElements(res.data.totalElements || 0);
+      fetchStats();
+    } catch (err) {
+      console.error("Error al cargar tareas", err);
+      showToast("Error al cargar las tareas", "error");
+    } finally {
+      setLoadingTasks(false);
     }
   };
 
@@ -204,7 +188,7 @@ export default function Dashboard() {
     try {
       await deleteTask(token, taskId);
       if (tasks.length === 1 && page > 0) {
-        setPage(page - 1); // era la única tarea de la página: vuelve a la anterior (el useEffect recarga)
+        setPage(page - 1);
       } else {
         await fetchTasks();
       }
