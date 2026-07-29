@@ -346,7 +346,72 @@
   color: #333333;
 }
 
-/* móvil: el header y las filas se reacomodan, el modal no se sale de la pantalla */
+/* ── Skeleton de carga: va a nivel global para que pinte en desktop y en móvil ── */
+.skeleton-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skeleton-item {
+  background-color: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.skeleton-info {
+  flex: 1;
+}
+
+.skeleton-line {
+  background-color: #e5e7eb;
+  border-radius: 4px;
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+.skeleton-title {
+  height: 1rem;
+  width: 60%;
+}
+
+.skeleton-desc {
+  height: 0.8rem;
+  width: 40%;
+  margin-top: 0.4rem;
+}
+
+.skeleton-badge {
+  height: 1.4rem;
+  width: 80px;
+  border-radius: 999px;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* reset defensivo: index.css ya lo cubre globalmente, se deja por si acaso */
+.task-list,
+.skeleton-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Responsive: solo reacomodos de layout en pantallas chicas ── */
 @media (max-width: 600px) {
   .dashboard-header {
     flex-wrap: wrap;
@@ -385,61 +450,5 @@
   .icon-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-  }
-
-  .skeleton-list {
-    list-style: none;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .skeleton-item {
-    background-color: #ffffff;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    padding: 1rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .skeleton-info {
-    flex: 1;
-  }
-
-  .skeleton-line {
-    background-color: #e5e7eb;
-    border-radius: 4px;
-    animation: skeleton-pulse 1.2s ease-in-out infinite;
-  }
-
-  .skeleton-title {
-    height: 1rem;
-    width: 60%;
-  }
-
-  .skeleton-desc {
-    height: 0.8rem;
-    width: 40%;
-    margin-top: 0.4rem;
-  }
-
-  .skeleton-badge {
-    height: 1.4rem;
-    width: 80px;
-    border-radius: 999px;
-  }
-
-  @keyframes skeleton-pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.4;
-    }
   }
 }
